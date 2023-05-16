@@ -24,6 +24,7 @@ class CodeStream(CodeStreamAPI):
         "_raw_code_bytes",
         "invalid_positions",
         "valid_positions",
+        # pc应该是program_counter，但因为这个变量从CodeStreamAPI继承过来，所以没定义也不会出错
         "pc",
     ]
 
@@ -74,6 +75,9 @@ class CodeStream(CodeStreamAPI):
 
     @contextlib.contextmanager
     def seek(self, program_counter: int) -> Iterator["CodeStream"]:
+        """
+        配合跳转指令使用
+        """
         anchor_pc = self.program_counter
         self.program_counter = program_counter
         try:
