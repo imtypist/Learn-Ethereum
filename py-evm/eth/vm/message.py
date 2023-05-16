@@ -81,6 +81,7 @@ class Message(MessageAPI):
 
         if create_address is not None:
             validate_canonical_address(create_address, title="Message.storage_address")
+        # storage_address是要访问的storage slot（也就是trie树的叶子结点）的index/key
         self.storage_address = create_address
 
         if code_address is not None:

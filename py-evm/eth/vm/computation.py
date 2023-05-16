@@ -87,6 +87,9 @@ def NO_RESULT(computation: ComputationAPI) -> None:
 
 
 def memory_gas_cost(size_in_bytes: int) -> int:
+    """
+    计算memory gas开销，以32字节为单位，计算线性开销和二次开销
+    """
     size_in_words = ceil32(size_in_bytes) // 32
     linear_cost = size_in_words * GAS_MEMORY
     quadratic_cost = size_in_words**2 // GAS_MEMORY_QUADRATIC_DENOMINATOR
@@ -140,8 +143,9 @@ class BaseComputation(ComputationAPI, Configurable):
         self.state = state
         self.msg = message
         self.transaction_context = transaction_context
+        # code stream包含在msg里面
         self.code = CodeStream(message.code)
-
+        # msg中包含起始gas预算
         self._gas_meter = self._configure_gas_meter()
 
         self.children = []
@@ -161,6 +165,9 @@ class BaseComputation(ComputationAPI, Configurable):
         message: MessageAPI,
         transaction_context: TransactionContextAPI,
     ) -> ComputationAPI:
+        """
+        调用VM执行合约逻辑
+        """
         raise NotImplementedError("Must be implemented by subclasses")
 
     @classmethod
@@ -170,11 +177,17 @@ class BaseComputation(ComputationAPI, Configurable):
         message: MessageAPI,
         transaction_context: TransactionContextAPI,
     ) -> ComputationAPI:
+        """
+        调用VM执行创建合约逻辑
+        """
         raise NotImplementedError("Must be implemented by subclasses")
 
     # -- convenience -- #
     @property
     def is_origin_computation(self) -> bool:
+        """
+        用来检测是否为最外层计算depth==0
+        """
         return self.msg.sender == self.transaction_context.origin
 
     # -- runtime operations -- #
@@ -212,6 +225,7 @@ class BaseComputation(ComputationAPI, Configurable):
         self,
         child_msg: MessageAPI,
     ) -> ComputationAPI:
+        # 判断是不是合约创建消息
         if child_msg.is_create:
             child_computation = self.apply_create_message(
                 self.state,
@@ -233,6 +247,7 @@ class BaseComputation(ComputationAPI, Configurable):
         if child_computation.is_error:
             if child_computation.msg.is_create:
                 self.return_data = child_computation.output
+            # 非合约创建，VM执行中出错，剩余gas销毁
             elif child_computation.should_burn_gas:
                 self.return_data = b""
             else:
@@ -246,6 +261,7 @@ class BaseComputation(ComputationAPI, Configurable):
 
     # -- gas consumption -- #
     def get_gas_refund(self) -> int:
+        # 若执行错误不返还剩余gas
         if self.is_error:
             return 0
         else:
@@ -296,6 +312,7 @@ class BaseComputation(ComputationAPI, Configurable):
             validate_uint256(topic, title="Log entry topic")
         validate_is_bytes(data, title="Log entry data")
         self._log_entries.append(
+            # Address本质类型是bytes
             (self.transaction_context.get_next_log_counter(), account, topics, data)
         )
 
@@ -338,11 +355,12 @@ class BaseComputation(ComputationAPI, Configurable):
                 precompile(computation)
                 return computation
 
-            # show_debug2 = computation.logger.show_debug2
-            show_debug2 = True
+            show_debug2 = computation.logger.show_debug2
+            # show_debug2 = True
 
             opcode_lookup = computation.opcodes
             for opcode in computation.code:
+                # 获取对应opcode的实现函数，在logic文件夹下
                 try:
                     opcode_fn = opcode_lookup[opcode]
                 except KeyError:
@@ -351,21 +369,21 @@ class BaseComputation(ComputationAPI, Configurable):
                 if show_debug2:
                     # We dig into some internals for debug logs
                     base_comp = cast(BaseComputation, computation)
-                    # computation.logger.debug2(
-                    #     "OPCODE: 0x%x (%s) | pc: %s | stack: %s",
-                    #     opcode,
-                    #     opcode_fn.mnemonic,
-                    #     max(0, computation.code.program_counter - 1),
-                    #     base_comp._stack,
-                    # )
-
-                    print(
-                        "OPCODE: 0x%x (%s) | pc: %s | stack: %s" %
-                        (opcode,
+                    computation.logger.debug2(
+                        "OPCODE: 0x%x (%s) | pc: %s | stack: %s",
+                        opcode,
                         opcode_fn.mnemonic,
                         max(0, computation.code.program_counter - 1),
-                        base_comp._stack)
+                        base_comp._stack,
                     )
+
+                    # print(
+                    #     "OPCODE: 0x%x (%s) | pc: %s | stack: %s" %
+                    #     (opcode,
+                    #     opcode_fn.mnemonic,
+                    #     max(0, computation.code.program_counter - 1),
+                    #     base_comp._stack)
+                    # )
 
                 try:
                     opcode_fn(computation=computation)
@@ -413,6 +431,9 @@ class BaseComputation(ComputationAPI, Configurable):
 
     # -- memory management -- #
     def extend_memory(self, start_position: int, size: int) -> None:
+        """
+        扩大VM memory
+        """
         validate_uint256(start_position, title="Memory start position")
         validate_uint256(size, title="Memory size")
 
@@ -434,6 +455,7 @@ class BaseComputation(ComputationAPI, Configurable):
         if size:
             if before_cost < after_cost:
                 gas_fee = after_cost - before_cost
+                # 扣除扩大memory的额外gas开销
                 self._gas_meter.consume_gas(
                     gas_fee,
                     reason=" ".join(
@@ -592,6 +614,7 @@ class BaseComputation(ComputationAPI, Configurable):
         exc_value: Optional[BaseException],
         traceback: Optional[TracebackType],
     ) -> Union[None, bool]:
+        # VM执行出错，非正常退出
         if exc_value and isinstance(exc_value, VMError):
             if self.logger.show_debug2:
                 self.logger.debug2(
