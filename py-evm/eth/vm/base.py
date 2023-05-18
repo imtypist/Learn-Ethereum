@@ -363,6 +363,7 @@ class VM(Configurable, VirtualMachineAPI):
 
         if hasattr(block, "withdrawals"):
             # post-shanghai blocks
+            # 上海升级后质押的ETH可以提款
             block_params["withdrawals"] = block.withdrawals
 
         self._block = self.get_block().copy(**block_params)
@@ -398,7 +399,7 @@ class VM(Configurable, VirtualMachineAPI):
             receipts,
             withdrawals=withdrawals,
         )
-
+        # 新区块构造完成后开始挖矿，即寻找适合的nonce值
         return self.mine_block(filled_block)
 
     def mine_block(
@@ -420,9 +421,10 @@ class VM(Configurable, VirtualMachineAPI):
         receipts: Sequence[ReceiptAPI],
         withdrawals: Sequence[WithdrawalAPI] = None,
     ) -> BlockAPI:
+        # 交易组织一个trie结构
         tx_root_hash, tx_kv_nodes = make_trie_root_and_nodes(transactions)
         self.chaindb.persist_trie_data_dict(tx_kv_nodes)
-
+        # 交易回执组织一个trie结构
         receipt_root_hash, receipt_kv_nodes = make_trie_root_and_nodes(receipts)
         self.chaindb.persist_trie_data_dict(receipt_kv_nodes)
 
@@ -466,6 +468,7 @@ class VM(Configurable, VirtualMachineAPI):
         )
 
         for uncle in block.uncles:
+            # GHOST协议，被引用的叔块也会得到奖励
             uncle_reward = self.get_uncle_reward(block.number, uncle)
             self.logger.debug(
                 "UNCLE REWARD REWARD: %s -> %s",
@@ -637,7 +640,7 @@ class VM(Configurable, VirtualMachineAPI):
             raise ValidationError(
                 f"This vm ({self!r}) is not equipped to validate a block of type {block!r}"  # noqa: E501
             )
-
+        # 检查是否是创世块
         if block.is_genesis:
             validate_length_lte(
                 block.header.extra_data,
@@ -645,16 +648,17 @@ class VM(Configurable, VirtualMachineAPI):
                 title="BlockHeader.extra_data",
             )
         else:
+            # 不是创世块，就要进一步检查区块头
             parent_header = get_parent_header(block.header, self.chaindb)
             self.validate_header(block.header, parent_header)
-
+        # 检查区块包含的交易merkle trie root和区块头中的是否一致
         tx_root_hash, _ = make_trie_root_and_nodes(block.transactions)
         if tx_root_hash != block.header.transaction_root:
             raise ValidationError(
                 f"Block's transaction_root ({block.header.transaction_root!r}) "
                 f"does not match expected value: {tx_root_hash!r}"
             )
-
+        # 检查引用的叔块是否超过最大值
         if len(block.uncles) > MAX_UNCLES:
             raise ValidationError(
                 f"Blocks may have a maximum of {MAX_UNCLES} uncles.  "

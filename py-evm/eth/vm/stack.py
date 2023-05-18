@@ -44,7 +44,7 @@ class Stack(StackAPI):
     #   form: integer or bytes. Whatever operation is pulling from the stack, also has
     #   its preferred representation to work with. Typically, those two representations
     #   line up (pushed & pulled) so we save a notable amount of conversion time by
-    #   storing heterogenous data on the stack, and converting only when necessary.
+    #   storing heterogeneous data on the stack, and converting only when necessary.
     #
 
     def __init__(self) -> None:
@@ -196,6 +196,9 @@ class Stack(StackAPI):
             return tuple(type_cast_popped)
 
     def swap(self, position: int) -> None:
+        """
+        position处的数据与栈顶数据交换
+        """
         idx = -1 * position - 1
         try:
             self.values[-1], self.values[idx] = self.values[idx], self.values[-1]
@@ -203,6 +206,9 @@ class Stack(StackAPI):
             raise InsufficientStack(f"Insufficient stack items for SWAP{position}")
 
     def dup(self, position: int) -> None:
+        """
+        在栈顶复制（push）一个position处的数据
+        """
         if len(self.values) > 1023:
             raise FullStack("Stack limit reached")
 
@@ -213,6 +219,9 @@ class Stack(StackAPI):
             raise InsufficientStack(f"Insufficient stack items for DUP{position}")
 
     def _stack_items_str(self) -> Iterable[str]:
+        """
+        把栈内数据str化，应该用于输出debug
+        """
         for item_type, val in self.values:
             if isinstance(val, int):
                 yield hex(val)

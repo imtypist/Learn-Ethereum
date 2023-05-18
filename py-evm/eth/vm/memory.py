@@ -20,6 +20,7 @@ class Memory(MemoryAPI):
     logger = logging.getLogger("eth.vm.memory.Memory")
 
     def __init__(self) -> None:
+        # memory就是一个bytearray模拟
         self._bytes = bytearray()
 
     def extend(self, start_position: int, size: int) -> None:
@@ -32,6 +33,7 @@ class Memory(MemoryAPI):
 
         size_to_extend = new_size - len(self)
         try:
+            # 新增加的memory填0
             self._bytes.extend(itertools.repeat(0, size_to_extend))
         except BufferError:
             # we can't extend the buffer (which might involve relocating it) if a

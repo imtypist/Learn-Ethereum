@@ -74,6 +74,7 @@ class Message(MessageAPI):
 
         validate_is_integer(depth, title="Message.depth")
         validate_gte(depth, minimum=0, title="Message.depth")
+        # 消息可能会调用另一个消息，所以用depth表示call调用栈的深度
         self.depth = depth
 
         validate_is_bytes(code, title="Message.code")
@@ -94,6 +95,7 @@ class Message(MessageAPI):
         self.should_transfer_value = should_transfer_value
 
         validate_is_boolean(is_static, title="Message.is_static")
+        # static消息不会改变区块链状态，也就是合约中get类型的方法
         self.is_static = is_static
 
     @property

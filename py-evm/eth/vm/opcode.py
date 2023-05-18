@@ -19,7 +19,7 @@ from eth.abc import (
     OpcodeAPI,
 )
 
-T = TypeVar("T")
+T = TypeVar("T")  # can be anything
 
 
 class Opcode(Configurable, OpcodeAPI):
@@ -40,6 +40,9 @@ class Opcode(Configurable, OpcodeAPI):
     def as_opcode(
         cls: Type[T], logic_fn: Callable[..., Any], mnemonic: str, gas_cost: int
     ) -> T:
+        """
+        将opcode和对应的fn绑定成一个新class返回，调用class就可以执行对应的fn
+        """
         if gas_cost:
 
             @functools.wraps(logic_fn)
@@ -62,6 +65,7 @@ class Opcode(Configurable, OpcodeAPI):
             "mnemonic": mnemonic,
             "gas_cost": gas_cost,
         }
+        # 返回新的类型对象，props是类内定义的空间变量
         opcode_cls = type(f"opcode:{mnemonic}", (cls,), props)
         return opcode_cls()
 

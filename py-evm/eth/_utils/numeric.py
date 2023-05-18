@@ -31,6 +31,9 @@ def int_to_bytes32(value: Union[int, bool]) -> Hash32:
 
 
 def ceilXX(value: int, ceiling: int) -> int:
+    """
+    补齐XX字节的整数倍
+    """
     remainder = value % ceiling
     if remainder == 0:
         return value
