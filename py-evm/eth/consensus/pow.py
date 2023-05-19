@@ -88,7 +88,7 @@ def check_pow(
     validate_lte(result, 2**256 // difficulty, title="POW Difficulty")
 
 
-MAX_TEST_MINE_ATTEMPTS = 1000
+MAX_TEST_MINE_ATTEMPTS = 10000
 
 
 def mine_pow_nonce(

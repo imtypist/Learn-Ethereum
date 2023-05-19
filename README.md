@@ -13,3 +13,10 @@ A minimal case to compile, deploy, execute smart contracts using [eth-tester](ht
 ```bash
 $ python3 main.py
 ```
+
+The [guides](https://py-evm.readthedocs.io/en/latest/guides/understanding_the_mining_process.html) to build a mining chain using py-evm.
+
+```bash
+$ python3 test-pyevm.py
+```
+

@@ -123,6 +123,9 @@ class BaseChain(Configurable, ChainAPI):
     def get_vm_class_for_block_number(
         cls, block_number: BlockNumber
     ) -> Type[VirtualMachineAPI]:
+        """
+        根据不同的block number获取不同的VM版本
+        """
         if cls.vm_configuration is None:
             raise AttributeError(
                 "Chain classes must define the VMs in vm_configuration"
